@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE — CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--bg2:#0a0a0a;--bg3:#111;--surface:rgba(255,255,255,.05);--surface2:rgba(255,255,255,.09);--border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.16);--text:#fff;--text2:#888;--text3:#444;--green:#4ade80;--red:#f87171;--yellow:#fbbf24;}
+*{margin:0;padding:0;box-sizing:border-box;cursor:none!important;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+#cursor{position:fixed;width:8px;height:8px;background:#fff;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);}
+#cursor-ring{position:fixed;width:28px;height:28px;border:1.5px solid rgba(255,255,255,.3);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .18s,height .18s;}
+/* ── SETUP SCREEN ── */
+#setup-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2000;background:var(--bg);overflow-y:auto;}
+.setup-wrap{width:680px;max-width:95vw;padding:48px 0;}
+.setup-logo{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
+.setup-logo em{font-style:normal;color:var(--text3);}
+.setup-sub{font-size:11px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:36px;}
+.setup-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:16px;}
+.setup-step{display:flex;gap:14px;margin-bottom:16px;}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.step-body{flex:1;}
+.step-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+.step-desc{font-size:12px;color:var(--text2);line-height:1.6;}
+.step-link{color:#fff;font-weight:600;text-decoration:underline;}
+.setup-code{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:12px;color:var(--text2);margin-top:8px;word-break:break-all;}
+.setup-divider{height:1px;background:var(--border);margin:20px 0;}
+.setup-form-title{font-size:14px;font-weight:700;margin-bottom:16px;}
+.conn-status{padding:10px 14px;border-radius:9px;font-size:13px;margin-top:12px;display:none;align-items:center;gap:8px;}
+.conn-status.ok{display:flex;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);color:var(--green);}
+.conn-status.err{display:flex;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:var(--bg);display:none;}
+.login-card{width:380px;padding:48px 40px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;position:relative;}
+.login-logo{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
+.login-logo em{font-style:normal;color:var(--text3);}
+.login-sub{color:var(--text3);font-size:11px;margin-bottom:34px;letter-spacing:.5px;text-transform:uppercase;}
+.login-hint{margin-top:14px;font-size:11px;color:var(--text3);text-align:center;line-height:1.8;}
+.login-hint a{color:var(--text2);text-decoration:underline;}
+/* ── FORM ── */
+input,select,textarea{width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+input:focus,select:focus,textarea:focus{border-color:rgba(255,255,255,.35);box-shadow:0 0 0 3px rgba(255,255,255,.04);}
+input::placeholder,textarea::placeholder{color:var(--text3);}
+select option{background:#0a0a0a;color:#fff;}
+label{display:block;font-size:10px;color:var(--text2);margin-bottom:5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.field{margin-bottom:14px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+/* ── BUTTONS ── */
+.btn{padding:10px 18px;border-radius:10px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;white-space:nowrap;}
+.btn-primary{background:#fff;color:#000;}
+.btn-primary:hover{background:#e5e5e5;transform:translateY(-1px);}
+.btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);border-color:var(--border2);}
+.btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);}
+.btn-danger:hover{background:rgba(248,113,113,.2);}
+.btn-success{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2);}
+.btn-success:hover{background:rgba(74,222,128,.2);}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:8px;}
+.btn-xs{padding:5px 10px;font-size:11px;border-radius:7px;}
+.btn-full{width:100%;}
+.btn:disabled{opacity:.4;}
+/* ── APP ── */
+#app{display:none;min-height:100vh;position:relative;z-index:1;}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;}
+.sidebar-logo{padding:22px 20px;border-bottom:1px solid var(--border);}
+.logo-name{font-size:20px;font-weight:800;letter-spacing:-1px;}
+.logo-name em{font-style:normal;color:var(--text3);}
+.logo-tag{font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:.5px;}
+nav{padding:8px 0;flex:1;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:10px 18px;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s;position:relative;}
+.nav-item:hover{color:var(--text);background:var(--surface);}
+.nav-item.active{color:#fff;background:var(--surface);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:2px;background:#fff;border-radius:0 2px 2px 0;}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;animation:pip 2s infinite;}
+.sidebar-user{padding:14px 18px;border-top:1px solid var(--border);}
+.su-name{font-size:13px;font-weight:600;display:block;margin-bottom:2px;}
+.su-role{font-size:11px;color:var(--text3);display:block;margin-bottom:10px;}
+.main{margin-left:220px;min-height:100vh;}
+.topbar{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.85);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-title{font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+.notif-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:14px;position:relative;transition:all .15s;}
+.notif-btn:hover{background:var(--surface2);border-color:var(--border2);}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--red);border-radius:50%;animation:pip 1.5s infinite;}
+@keyframes pip{0%,100%{opacity:1}50%{opacity:.5}}
+.content{padding:24px;}
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text3);font-size:13px;gap:10px;}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── SECTION ── */
+.sec-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+.sec-title{font-size:21px;font-weight:800;letter-spacing:-.5px;}
+.sec-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+/* ── KANBAN ── */
+.kanban-filter{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.kanban-filter select,.kanban-filter input{max-width:180px;font-size:12px;padding:7px 11px;}
+.kanban-outer{overflow-x:auto;padding-bottom:20px;user-select:none;}
+.kanban-outer::-webkit-scrollbar{height:4px;}
+.kanban-outer::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.kanban-wrap{display:flex;gap:12px;align-items:flex-start;min-width:max-content;padding:2px 0;}
+.k-col{width:248px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;flex-shrink:0;transition:border-color .2s;}
+.k-col.drag-over{border-color:rgba(255,255,255,.4);}
+.col-head{padding:12px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.col-name-wrap{display:flex;align-items:center;gap:7px;}
+.col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.col-name{font-size:12px;font-weight:700;}
+.col-cnt{background:var(--surface);color:var(--text2);font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.col-cards{padding:7px;min-height:60px;}
+/* ── CARD ── */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:6px;position:relative;overflow:hidden;transition:all .15s;}
+.card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.5);}
+.card.dragging{opacity:.3;}
+.card-name{font-size:13px;font-weight:600;margin-bottom:2px;padding-right:14px;}
+.card-contact{font-size:11px;color:var(--text3);margin-bottom:7px;}
+.card-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px;align-items:center;}
+.tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;border:1px solid rgba(255,255,255,.1);color:#888;background:rgba(255,255,255,.04);}
+.card-alert{font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;}
+.card-alert.urgent{color:var(--red);background:rgba(248,113,113,.1);}
+.card-alert.soon{color:var(--yellow);background:rgba(251,191,36,.1);}
+.card-btns{display:flex;gap:4px;}
+.card-btn{flex:1;padding:6px 4px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:'Sora',sans-serif;font-size:11px;font-weight:600;transition:all .13s;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;}
+.card-btn:hover{color:var(--text);border-color:var(--border2);background:var(--surface2);}
+.card-btn.resp{color:var(--green);border-color:rgba(74,222,128,.2);}
+.card-btn.resp:hover{background:rgba(74,222,128,.1);}
+.card-btn.wa{color:var(--green);border-color:rgba(74,222,128,.15);}
+.card-btn.wa:hover{background:rgba(74,222,128,.08);}
+.urgency-pip{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;}
+.urgency-pip.urgent{background:var(--red);animation:pip 1.5s infinite;}
+.urgency-pip.soon{background:var(--yellow);}
+.drop-zone{border:1.5px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--text3);font-size:11px;}
+/* ── LIST ── */
+.list-table{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.list-head,.list-row{display:grid;align-items:center;padding:10px 16px;}
+.list-head{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.list-row{border-bottom:1px solid var(--border);font-size:13px;transition:background .13s;}
+.list-row:last-child{border-bottom:none;}
+.list-row:hover{background:var(--surface);}
+.gc-today{grid-template-columns:2.2fr 1.1fr 1fr 1fr 140px;}
+.gc-leads{grid-template-columns:2.2fr 1fr 1fr 1fr 100px;}
+.lead-name-cell{display:flex;align-items:center;gap:10px;}
+.avatar{width:29px;height:29px;border-radius:50%;background:#1a1a1a;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.act-cell{display:flex;gap:4px;}
+/* ── DASHBOARD ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:18px;}
+.stat-lbl{font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.stat-val{font-size:32px;font-weight:800;letter-spacing:-1.5px;line-height:1;}
+.stat-desc{font-size:11px;color:var(--text3);margin-top:4px;}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:20px;}
+.chart-title{font-size:13px;font-weight:700;margin-bottom:16px;}
+.bar-row{margin-bottom:10px;}
+.bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px;}
+.bar-labels span:last-child{color:var(--text);font-weight:600;}
+.bar-track{height:5px;background:var(--surface);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(.16,1,.3,1);}
+/* ── MODAL ── */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-ov.open{opacity:1;pointer-events:all;}
+.modal{width:580px;max-width:95vw;max-height:88vh;background:var(--bg2);border:1px solid var(--border);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;transform:translateY(20px) scale(.98);transition:transform .2s;}
+.modal-ov.open .modal{transform:none;}
+.modal-sm{width:420px!important;}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:15px;font-weight:700;}
+.modal-body{padding:20px;overflow-y:auto;flex:1;}
+.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.close-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .13s;}
+.close-btn:hover{color:var(--text);background:var(--surface2);}
+.modal-tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap;}
+.m-tab{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:500;color:var(--text2);transition:all .13s;border:1px solid transparent;}
+.m-tab.active{background:var(--surface2);color:#fff;border-color:var(--border);}
+.m-tab:hover:not(.active){background:var(--surface);color:var(--text);}
+/* ── HISTORY / MSG / NOTES ── */
+.hist-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.hist-item:last-child{border-bottom:none;}
+.hist-time{font-size:10px;color:var(--text3);white-space:nowrap;padding-top:1px;min-width:90px;}
+.hist-action{font-size:12px;color:var(--text2);}
+.msg-item{padding:10px 13px;background:var(--surface);border-radius:9px;margin-bottom:7px;border-left:2px solid rgba(255,255,255,.15);}
+.note-item{padding:10px 13px;background:var(--surface);border-radius:9px;margin-bottom:7px;border-left:2px solid rgba(251,191,36,.4);}
+.item-date{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.item-text{font-size:13px;line-height:1.5;}
+/* ── SCRIPTS ── */
+.script-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:8px;transition:border-color .15s;}
+.script-item:hover{border-color:var(--border2);}
+.script-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.script-title{font-size:13px;font-weight:700;}
+.script-meta{display:flex;gap:5px;}
+.script-body{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px;}
+.script-actions{display:flex;gap:5px;}
+.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;border:1px solid;letter-spacing:.3px;}
+.badge-all{color:#888;border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.04);}
+.badge-vend{color:var(--green);border-color:rgba(74,222,128,.2);background:rgba(74,222,128,.06);}
+.badge-gest{color:var(--yellow);border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.06);}
+.script-empty{text-align:center;padding:24px;color:var(--text3);font-size:12px;}
+/* ── INFO BOX ── */
+.info-box{padding:10px 13px;border-radius:9px;font-size:12px;margin-bottom:13px;display:flex;align-items:center;gap:8px;}
+.info-box.urgent{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:var(--red);}
+.info-box.warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);color:var(--yellow);}
+/* ── CONFIG ── */
+.cfg-tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap;}
+.cfg-tab{padding:7px 16px;border-radius:9px;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s;border:1px solid transparent;}
+.cfg-tab.active{background:var(--surface2);color:#fff;border-color:var(--border);}
+.cfg-tab:hover:not(.active){background:var(--surface);color:var(--text);}
+.cfg-table{background:var(--bg2);border:1px solid var(--border);border-radius:13px;overflow:hidden;}
+.cfg-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);font-size:13px;}
+.cfg-row:last-child{border-bottom:none;}
+.cfg-row:hover:not(.cfg-head){background:var(--surface);}
+.cfg-head{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.cfg-row .name-cell{flex:1;font-weight:500;}
+.cfg-row .meta-cell{color:var(--text3);font-size:12px;flex-shrink:0;min-width:80px;}
+.dot-preview{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.row-actions{display:flex;gap:5px;margin-left:auto;}
+/* ── COLOR PICKER ── */
+.color-picker-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;}
+.color-opt{width:26px;height:26px;border-radius:50%;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+.color-opt:hover,.color-opt.sel{border-color:#fff;transform:scale(1.15);}
+/* ── TOAST ── */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:5px;}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 15px;font-size:13px;font-weight:500;animation:tIn .25s ease;display:flex;align-items:center;gap:7px;box-shadow:0 8px 30px rgba(0,0,0,.6);max-width:300px;}
+.toast.success{border-color:rgba(74,222,128,.3);}
+.toast.error{border-color:rgba(248,113,113,.3);}
+.toast.info{border-color:rgba(255,255,255,.15);}
+@keyframes tIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+.empty{text-align:center;padding:32px 20px;color:var(--text3);}
+.empty-icon{font-size:26px;margin-bottom:8px;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+</style>
+</head>
+<body>
+<div id="cursor"></div><div id="cursor-ring"></div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-wrap">
+    <div class="setup-logo">ACE<em> — CRM</em></div>
+    <div class="setup-sub">Configuração inicial do banco de dados</div>
+
+    <div class="setup-card">
+      <div class="setup-form-title">📡 Conectar ao Supabase</div>
+      <div class="field"><label>URL do Projeto Supabase</label><input id="sb-url" placeholder="https://xxxxxxxxxxxxxxxx.supabase.co"></div>
+      <div class="field"><label>Chave Anon (anon / public key)</label><input id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></div>
+      <button class="btn btn-primary btn-full" onclick="testConn()">Testar conexão →</button>
+      <div id="conn-status" class="conn-status"></div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-form-title">📋 Como configurar em 5 passos</div>
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Criar conta gratuita</div>
+          <div class="step-desc">Acesse <a class="step-link" href="https://supabase.com" target="_blank">supabase.com</a> → Sign up (use sua conta Google)</div>
+        </div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Criar novo projeto</div>
+          <div class="step-desc">Clique em "New Project" → dê um nome (ex: ace-crm) → escolha uma região próxima (South America) → defina uma senha forte</div>
+        </div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Executar o SQL de configuração</div>
+          <div class="step-desc">No menu lateral do Supabase: SQL Editor → New Query → cole o conteúdo do arquivo <strong>ace-crm-setup.sql</strong> → Run (▶)</div>
+        </div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Copiar as credenciais</div>
+          <div class="step-desc">Menu lateral: Settings → API → copie a "Project URL" e a "anon public" key</div>
+        </div>
+      </div>
+      <div class="setup-step" style="margin-bottom:0">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Cole acima e clique em "Testar conexão"</div>
+          <div class="step-desc">Pronto! Todos os usuários da equipe acessarão os mesmos dados em tempo real.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ACE<em> — CRM</em></div>
+    <div class="login-sub">Prospecção Inteligente</div>
+    <div class="field"><label>Usuário</label><input type="text" id="lu" placeholder="ID ou nome"></div>
+    <div class="field"><label>Senha</label><input type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Entrar →</button>
+    <div class="login-hint">Problemas? <a href="#" onclick="resetSetup()">Reconfigurar banco de dados</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-name">ACE<em> — CRM</em></div><div class="logo-tag">PROSPECÇÃO INTELIGENTE</div></div>
+    <nav>
+      <div class="nav-item active" onclick="showView('kanban')" id="nav-kanban"><span class="nav-icon">▦</span>Kanban</div>
+      <div class="nav-item" onclick="showView('lista')" id="nav-lista"><span class="nav-icon">⚡</span>Lista do Dia<span class="nav-badge" id="badge-today" style="display:none">0</span></div>
+      <div class="nav-item" onclick="showView('dashboard')" id="nav-dashboard"><span class="nav-icon">◎</span>Dashboard</div>
+      <div class="nav-item" onclick="showView('leads')" id="nav-leads"><span class="nav-icon">◈</span>Todos os Leads</div>
+      <div class="nav-item" onclick="showView('scripts')" id="nav-scripts"><span class="nav-icon">💬</span>Scripts</div>
+      <div class="nav-item" id="nav-config" onclick="showView('config')" style="display:none"><span class="nav-icon">⊞</span>Configurações</div>
+    </nav>
+    <div class="sidebar-user">
+      <span class="su-name" id="su-name">—</span>
+      <span class="su-role" id="su-role">—</span>
+      <button class="btn btn-ghost btn-sm btn-full" onclick="doLogout()">Sair</button>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left"><div class="topbar-title" id="topbar-title">Kanban</div></div>
+      <div class="topbar-right" id="topbar-acts">
+        <button class="notif-btn" id="notif-btn" onclick="showView('lista')" title="Lista do Dia"><span>🔔</span><div class="notif-dot" id="notif-dot" style="display:none"></div></button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal-ov" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal-inner">
+    <div class="modal-head"><div class="modal-title" id="m-title">—</div><button class="close-btn" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="m-body"></div>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// SUPABASE SETUP
+// ═══════════════════════════════════════════
+const PRESET_COLORS=['#ffffff','#cccccc','#888888','#555555','#4ade80','#f87171','#fbbf24','#60a5fa','#c084fc','#fb923c'];
+let sb = null;
+
+function initSB() {
+  const url = localStorage.getItem('ace_sb_url');
+  const key = localStorage.getItem('ace_sb_key');
+  if (!url || !key) return false;
+  sb = supabase.createClient(url, key);
+  return true;
+}
+
+async function testConn() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  if (!url || !key) { showConnStatus('Preencha os dois campos', false); return; }
+  const btn = document.querySelector('#setup-screen .btn-primary');
+  btn.disabled = true; btn.textContent = 'Testando...';
+  try {
+    const client = supabase.createClient(url, key);
+    const {data, error} = await client.from('ace_users').select('count').limit(1);
+    if (error) throw error;
+    localStorage.setItem('ace_sb_url', url);
+    localStorage.setItem('ace_sb_key', key);
+    sb = client;
+    showConnStatus('✓ Conectado com sucesso! Redirecionando...', true);
+    setTimeout(() => { document.getElementById('setup-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; }, 1200);
+  } catch(e) {
+    showConnStatus('Erro: ' + (e.message || 'verifique a URL e a chave'), false);
+    btn.disabled = false; btn.textContent = 'Testar conexão →';
+  }
+}
+function showConnStatus(msg, ok) {
+  const el = document.getElementById('conn-status');
+  el.className = 'conn-status ' + (ok ? 'ok' : 'err');
+  el.textContent = msg;
+}
+function resetSetup() {
+  localStorage.removeItem('ace_sb_url'); localStorage.removeItem('ace_sb_key');
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('setup-screen').style.display='flex';
+}
+
+// ═══════════════════════════════════════════
+// CACHE
+// ═══════════════════════════════════════════
+const C = { leads:[], users:[], stages:[], sources:[], scripts:[], loaded:false };
+
+async function loadAll() {
+  const [leads, lm, ln, lh, users, stages, sources, scripts] = await Promise.all([
+    sb.from('ace_leads').select('*').order('created_at',{ascending:false}),
+    sb.from('ace_lead_messages').select('*').order('created_at',{ascending:true}),
+    sb.from('ace_lead_notes').select('*').order('created_at',{ascending:true}),
+    sb.from('ace_lead_history').select('*').order('created_at',{ascending:false}),
+    sb.from('ace_users').select('*'),
+    sb.from('ace_stages').select('*').order('position',{ascending:true}),
+    sb.from('ace_sources').select('*'),
+    sb.from('ace_scripts').select('*').order('created_at',{ascending:false}),
+  ]);
+  // Merge messages/notes/history into leads
+  const msgs = lm.data||[], notes = ln.data||[], hist = lh.data||[];
+  C.leads = (leads.data||[]).map(l=>({
+    ...l,
+    messages: msgs.filter(m=>m.lead_id===l.id),
+    notes: notes.filter(n=>n.lead_id===l.id),
+    history: hist.filter(h=>h.lead_id===l.id),
+  }));
+  C.users = users.data||[];
+  C.stages = stages.data||[];
+  C.sources = sources.data||[];
+  C.scripts = scripts.data||[];
+  C.loaded = true;
+}
+
+// ═══════════════════════════════════════════
+// DB LAYER
+// ═══════════════════════════════════════════
+const DB = {
+  async insertLead(l) {
+    const {data,error} = await sb.from('ace_leads').insert({
+      name:l.name, phone:l.phone||null, instagram:l.instagram||null,
+      source_id:l.source_id, column_id:l.column_id, vendedor_id:l.vendedor_id||null,
+      last_contact: new Date().toISOString()
+    }).select().single();
+    if(error) throw error;
+    await DB.addHistory(data.id, 'Lead cadastrado');
+    return data;
+  },
+  async updateLead(id, changes) {
+    const {error} = await sb.from('ace_leads').update(changes).eq('id',id);
+    if(error) throw error;
+  },
+  async deleteLead(id) {
+    const {error} = await sb.from('ace_leads').delete().eq('id',id);
+    if(error) throw error;
+  },
+  async addMessage(leadId, text) {
+    const {error} = await sb.from('ace_lead_messages').insert({lead_id:leadId, text});
+    if(error) throw error;
+    await DB.updateLead(leadId, {last_contact: new Date().toISOString()});
+    await DB.addHistory(leadId, 'Mensagem registrada');
+  },
+  async addNote(leadId, text, author) {
+    const {error} = await sb.from('ace_lead_notes').insert({lead_id:leadId, text, author});
+    if(error) throw error;
+  },
+  async addHistory(leadId, action) {
+    const {error} = await sb.from('ace_lead_history').insert({lead_id:leadId, action});
+    if(error) throw error;
+  },
+  async upsertUser(u) {
+    const {error} = await sb.from('ace_users').upsert(u, {onConflict:'login_id'});
+    if(error) throw error;
+  },
+  async deleteUser(loginId) {
+    const {error} = await sb.from('ace_users').delete().eq('login_id',loginId);
+    if(error) throw error;
+  },
+  async upsertStage(s) {
+    const {error} = await sb.from('ace_stages').upsert(s, {onConflict:'id'});
+    if(error) throw error;
+  },
+  async deleteStage(id) {
+    const {error} = await sb.from('ace_stages').delete().eq('id',id);
+    if(error) throw error;
+  },
+  async upsertSource(s) {
+    const {error} = await sb.from('ace_sources').upsert(s, {onConflict:'id'});
+    if(error) throw error;
+  },
+  async deleteSource(id) {
+    const {error} = await sb.from('ace_sources').delete().eq('id',id);
+    if(error) throw error;
+  },
+  async upsertScript(s) {
+    const {error} = await sb.from('ace_scripts').upsert(s);
+    if(error) throw error;
+  },
+  async deleteScript(id) {
+    const {error} = await sb.from('ace_scripts').delete().eq('id',id);
+    if(error) throw error;
+  },
+};
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let CU=null, drag=null, curView='kanban';
+let kbVend='', kbSearch='', lCol='', lSearch='', cfgTab='stages', scriptFilter='';
+let realtimeCh = null;
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function myLeads(){return CU.role==='gestor'?C.leads:C.leads.filter(l=>l.vendedor_id===CU.login_id);}
+function daysSince(d){if(!d)return 9999;return Math.floor((Date.now()-new Date(d).getTime())/86400000);}
+function followStatus(lead){
+  const st=C.stages.find(s=>s.id===lead.column_id);
+  if(!st||!st.follow_days)return null;
+  const d=daysSince(lead.last_contact);
+  if(d>=st.follow_days)return'urgent';
+  if(d>=st.follow_days-1)return'soon';
+  return'ok';
+}
+function needsToday(l){return followStatus(l)==='urgent';}
+function refreshBadge(){
+  const cnt=myLeads().filter(needsToday).length;
+  const b=document.getElementById('badge-today');
+  const nd=document.getElementById('notif-dot');
+  if(b){b.textContent=cnt;b.style.display=cnt?'inline-flex':'none';}
+  if(nd) nd.style.display=cnt?'block':'none';
+}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});}
+function fmtDT(d){if(!d)return'—';return new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function stageById(id){return C.stages.find(s=>s.id===id)||{name:id,color:'#555',follow_days:null};}
+function sourceById(id){return C.sources.find(s=>s.id===id)||{label:id};}
+function userById(id){return C.users.find(u=>u.login_id===id)||{name:'—'};}
+function userName(id){return userById(id)?.name||'—';}
+function waLink(p){return'https://wa.me/55'+(p||'').replace(/\D/g,'');}
+function sourceTag(s){return`<span class="tag">${sourceById(s).label}</span>`;}
+function loading(){return`<div class="loading"><div class="spin"></div>Carregando...</div>`;}
+
+async function rerender(skipLoad) {
+  if(!skipLoad) {
+    await loadAll();
+    refreshBadge();
+  }
+  const c=document.getElementById('content');
+  if(curView==='kanban')renderKanban(c);
+  else if(curView==='lista')renderLista(c);
+  else if(curView==='leads')renderLeads(c);
+  else if(curView==='dashboard')renderDashboard(c);
+  else if(curView==='scripts')renderScripts(c);
+  else if(curView==='config')renderConfig(c);
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+async function doLogin(){
+  const uid=document.getElementById('lu').value.trim();
+  const pwd=document.getElementById('lp').value.trim();
+  const btn=document.getElementById('login-btn');
+  btn.disabled=true; btn.textContent='Entrando...';
+  try {
+    await loadAll();
+    const u=C.users.find(x=>x.login_id===uid||x.name.toLowerCase()===uid.toLowerCase());
+    if(!u||u.pass!==pwd){toast('Usuário ou senha incorretos','error');btn.disabled=false;btn.textContent='Entrar →';return;}
+    CU=u;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('su-name').textContent=u.name;
+    document.getElementById('su-role').textContent=u.role==='gestor'?'Gestor ★':'Vendedor';
+    if(u.role==='gestor') document.getElementById('nav-config').style.display='flex';
+    refreshBadge();
+    initRealtime();
+    initNotifications();
+    showView('kanban');
+  } catch(e) {
+    toast('Erro de conexão: '+e.message,'error');
+    btn.disabled=false; btn.textContent='Entrar →';
+  }
+}
+function doLogout(){
+  if(realtimeCh) sb.removeChannel(realtimeCh);
+  CU=null; document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+
+// ═══════════════════════════════════════════
+// REAL-TIME
+// ═══════════════════════════════════════════
+function initRealtime(){
+  if(realtimeCh) sb.removeChannel(realtimeCh);
+  realtimeCh = sb.channel('ace-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'ace_leads'},async()=>{ await rerender(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'ace_lead_messages'},async()=>{ await loadAll(); refreshBadge(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'ace_lead_notes'},async()=>{ await loadAll(); })
+    .on('postgres_changes',{event:'*',schema:'public',table:'ace_scripts'},async()=>{ await loadAll(); if(curView==='scripts') renderScripts(document.getElementById('content')); })
+    .subscribe();
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+function initNotifications(){
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+  checkAndNotify();
+  setInterval(checkAndNotify, 5*60*1000); // every 5min
+}
+function checkAndNotify(){
+  const pending=myLeads().filter(needsToday).length;
+  if(pending>0 && 'Notification' in window && Notification.permission==='granted'){
+    new Notification('ACE CRM — Lista do Dia', {
+      body:`${pending} lead${pending>1?'s':''} precisam de contato hoje!`,
+      icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚡</text></svg>'
+    });
+  }
+}
+
+// ═══════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════
+const VT={kanban:'Kanban',lista:'Lista do Dia',dashboard:'Dashboard',leads:'Todos os Leads',scripts:'Scripts & Templates',config:'Configurações'};
+function showView(v){
+  curView=v;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const nav=document.getElementById('nav-'+v); if(nav) nav.classList.add('active');
+  document.getElementById('topbar-title').textContent=VT[v]||v;
+  const acts=document.getElementById('topbar-acts');
+  const notifBtn=`<button class="notif-btn" id="notif-btn" onclick="showView('lista')" title="Lista do Dia">🔔<div class="notif-dot" id="notif-dot" style="display:${myLeads().filter(needsToday).length?'block':'none'}"></div></button>`;
+  acts.innerHTML=notifBtn;
+  if(v==='kanban'||v==='leads') acts.innerHTML+=`<button class="btn btn-primary btn-sm" onclick="openNewLead()">+ Novo Lead</button>`;
+  if(v==='scripts') acts.innerHTML+=`<button class="btn btn-primary btn-sm" onclick="openScriptModal()">+ Novo Script</button>`;
+  const c=document.getElementById('content');
+  if(v==='kanban')renderKanban(c);
+  else if(v==='lista')renderLista(c);
+  else if(v==='dashboard')renderDashboard(c);
+  else if(v==='leads')renderLeads(c);
+  else if(v==='scripts')renderScripts(c);
+  else if(v==='config')renderConfig(c);
+}
+
+// ═══════════════════════════════════════════
+// KANBAN
+// ═══════════════════════════════════════════
+function renderKanban(c){
+  const leads=myLeads();
+  const vendors=C.users.filter(u=>u.role==='vendedor');
+  let fl=[...leads];
+  if(kbVend) fl=fl.filter(l=>l.vendedor_id===kbVend);
+  if(kbSearch) fl=fl.filter(l=>l.name.toLowerCase().includes(kbSearch.toLowerCase())||(l.phone||'').includes(kbSearch));
+  const vSel=CU.role==='gestor'?`<select style="font-size:12px;padding:7px 11px;max-width:170px" onchange="kbVend=this.value;renderKanban(document.getElementById('content'))"><option value="">Todos os vendedores</option>${vendors.map(u=>`<option value="${u.login_id}" ${kbVend===u.login_id?'selected':''}>${u.name}</option>`).join('')}</select>`:'';
+  let html=`<div class="kanban-filter">${vSel}<input type="text" placeholder="Buscar lead..." value="${kbSearch}" oninput="kbSearch=this.value;renderKanban(document.getElementById('content'))" style="max-width:180px;font-size:12px;padding:7px 11px"></div>
+  <div class="kanban-outer" id="kanban-outer"><div class="kanban-wrap">`;
+  C.stages.forEach(st=>{
+    const cl=fl.filter(l=>l.column_id===st.id);
+    html+=`<div class="k-col" id="kc-${st.id}" ondragover="onDO(event,'${st.id}')" ondrop="onDrop(event,'${st.id}')" ondragleave="onDL(event,'${st.id}')">
+      <div class="col-head"><div class="col-name-wrap"><div class="col-dot" style="background:${st.color}"></div><span class="col-name">${st.name}</span></div><span class="col-cnt">${cl.length}</span></div>
+      <div class="col-cards" id="cc-${st.id}">
+        ${cl.length===0?`<div class="drop-zone">Solte aqui</div>`:''}
+        ${cl.map(l=>cardHTML(l,st)).join('')}
+      </div>
+    </div>`;
+  });
+  html+=`</div></div>`;c.innerHTML=html;initKanbanPan();
+}
+function cardHTML(lead,st){
+  const fst=followStatus(lead);
+  const pip=fst==='urgent'?`<div class="urgency-pip urgent"></div>`:fst==='soon'?`<div class="urgency-pip soon"></div>`:'';
+  const alert=fst==='urgent'?`<div class="card-alert urgent">● Contatar hoje</div>`:fst==='soon'?`<div class="card-alert soon">● Amanhã</div>`:'';
+  const vend=lead.vendedor_id&&CU.role==='gestor'?`<span style="font-size:10px;color:var(--text3)">${userName(lead.vendedor_id)}</span>`:'';
+  const waBtn=lead.phone?`<a class="card-btn wa" href="${waLink(lead.phone)}" target="_blank">WA</a>`:'';
+  return`<div class="card" draggable="true" id="card-${lead.id}" ondragstart="onDS(event,'${lead.id}')" ondragend="onDE(event)">
+    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${st.color};opacity:.5"></div>
+    ${pip}<div class="card-name">${lead.name}</div>
+    <div class="card-contact">${lead.phone||lead.instagram||'—'}</div>
+    <div class="card-meta">${sourceTag(lead.source_id)}${vend}</div>
+    ${alert}<div class="card-btns">
+      <button class="card-btn" onclick="openLead('${lead.id}')">Ver</button>
+      <button class="card-btn resp" onclick="doMarkResp('${lead.id}')">✓ Resp.</button>
+      ${waBtn}
+    </div>
+  </div>`;
+}
+function initKanbanPan(){
+  const outer=document.getElementById('kanban-outer');if(!outer)return;
+  let isDown=false,startX=0,sl=0;
+  outer.addEventListener('mousedown',e=>{
+    if(e.target.closest('.card')||e.target.closest('button')||e.target.closest('a')||e.target.closest('select')||e.target.closest('input'))return;
+    isDown=true;startX=e.pageX-outer.offsetLeft;sl=outer.scrollLeft;outer.style.cursor='grabbing';
+  });
+  document.addEventListener('mouseup',()=>{isDown=false;if(outer)outer.style.cursor='';});
+  outer.addEventListener('mouseleave',()=>{isDown=false;outer.style.cursor='';});
+  outer.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-outer.offsetLeft;outer.scrollLeft=sl-(x-startX)*1.2;});
+}
+function onDS(e,id){drag=id;setTimeout(()=>{document.getElementById('card-'+id)?.classList.add('dragging');},0);}
+function onDE(){document.getElementById('card-'+drag)?.classList.remove('dragging');}
+function onDO(e,id){e.preventDefault();document.getElementById('kc-'+id)?.classList.add('drag-over');}
+function onDL(e,id){document.getElementById('kc-'+id)?.classList.remove('drag-over');}
+async function onDrop(e,stId){
+  e.preventDefault();document.getElementById('kc-'+stId)?.classList.remove('drag-over');
+  if(!drag)return;
+  const l=C.leads.find(x=>x.id===drag);if(!l||l.column_id===stId)return;
+  const prev=stageById(l.column_id).name;
+  l.column_id=stId;l.last_contact=new Date().toISOString();
+  drag=null;renderKanban(document.getElementById('content'));refreshBadge();
+  try {
+    await DB.updateLead(l.id,{column_id:stId,last_contact:l.last_contact});
+    await DB.addHistory(l.id,`Movido de "${prev}" → "${stageById(stId).name}"`);
+    toast(`Movido para "${stageById(stId).name}"`,'success');
+  } catch(e){toast('Erro ao mover lead','error');}
+}
+async function doMarkResp(id){
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  l.column_id='resp';l.last_contact=new Date().toISOString();
+  rerender(true);
+  try{
+    await DB.updateLead(id,{column_id:'resp',last_contact:l.last_contact});
+    await DB.addHistory(id,'Marcado como Respondeu ✓');
+    toast('Marcado como Respondeu ✓','success');
+  }catch(e){toast('Erro','error');}
+}
+async function doMoveTo(id,stId){
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  l.column_id=stId;l.last_contact=new Date().toISOString();
+  rerender(true);
+  try{
+    await DB.updateLead(id,{column_id:stId,last_contact:l.last_contact});
+    await DB.addHistory(id,`Movido para "${stageById(stId).name}"`);
+    toast(`Movido para "${stageById(stId).name}"`,'success');
+  }catch(e){toast('Erro','error');}
+}
+
+// ═══════════════════════════════════════════
+// LISTA DO DIA
+// ═══════════════════════════════════════════
+function renderLista(c){
+  const leads=myLeads().filter(needsToday).sort((a,b)=>daysSince(a.last_contact)-daysSince(b.last_contact)).reverse();
+  let html=`<div class="sec-row"><div><div class="sec-title">Lista do Dia <span style="font-size:16px;font-weight:400;color:var(--text2)">(${leads.length})</span></div><div class="sec-sub">Gerada automaticamente pelas regras de follow-up.</div></div></div>`;
+  if(!leads.length){html+=`<div class="empty"><div class="empty-icon">🎉</div>Nenhum follow-up pendente hoje!</div>`;c.innerHTML=html;return;}
+  html+=`<div class="list-table"><div class="list-head gc-today"><div>Lead</div><div>Etapa</div><div>Sem resposta</div><div>Responsável</div><div>Ações</div></div>`;
+  leads.forEach(l=>{
+    const d=daysSince(l.last_contact);const dstr=d===0?'Hoje':d===1?'1 dia':`${d} dias`;const st=stageById(l.column_id);
+    html+=`<div class="list-row gc-today">
+      <div class="lead-name-cell"><div class="avatar">${l.name[0]}</div><div><div style="font-weight:600;font-size:13px">${l.name}</div><div style="font-size:11px;color:var(--text3)">${l.phone||l.instagram||'—'}</div></div></div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="col-dot" style="background:${st.color};width:6px;height:6px;border-radius:50%"></div><span style="font-size:12px;color:var(--text2)">${st.name}</span></div>
+      <div style="color:var(--red);font-weight:700;font-size:13px">${dstr}</div>
+      <div style="font-size:12px;color:var(--text3)">${userName(l.vendedor_id)}</div>
+      <div class="act-cell">
+        <button class="btn btn-ghost btn-xs" onclick="openLead('${l.id}')">Ver</button>
+        <button class="btn btn-success btn-xs" onclick="doMarkResp('${l.id}')">✓ Resp.</button>
+        ${l.phone?`<a class="btn btn-ghost btn-xs" href="${waLink(l.phone)}" target="_blank">WA</a>`:''}
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════
+// TODOS OS LEADS
+// ═══════════════════════════════════════════
+function renderLeads(c){
+  const all=myLeads();let leads=[...all];
+  if(lCol)leads=leads.filter(l=>l.column_id===lCol);
+  if(lSearch)leads=leads.filter(l=>l.name.toLowerCase().includes(lSearch.toLowerCase())||(l.phone||'').includes(lSearch)||(l.instagram||'').toLowerCase().includes(lSearch));
+  let html=`<div class="sec-row">
+    <div><div class="sec-title">Todos os Leads</div><div class="sec-sub">${leads.length} de ${all.length} leads</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select style="font-size:12px" onchange="lCol=this.value;renderLeads(document.getElementById('content'))"><option value="">Todas as etapas</option>${C.stages.map(s=>`<option value="${s.id}" ${lCol===s.id?'selected':''}>${s.name}</option>`).join('')}</select>
+      <input type="text" placeholder="Buscar..." value="${lSearch}" oninput="lSearch=this.value;renderLeads(document.getElementById('content'))" style="max-width:180px;font-size:12px">
+    </div>
+  </div>
+  <div class="list-table"><div class="list-head gc-leads"><div>Lead</div><div>Etapa</div><div>Origem</div><div>Cadastrado</div><div>Ações</div></div>`;
+  if(!leads.length)html+=`<div class="empty">Nenhum lead encontrado</div>`;
+  leads.forEach(l=>{
+    const st=stageById(l.column_id);
+    html+=`<div class="list-row gc-leads">
+      <div class="lead-name-cell"><div class="avatar">${l.name[0]}</div><div><div style="font-weight:600;font-size:13px">${l.name}</div><div style="font-size:11px;color:var(--text3)">${l.phone||l.instagram||'—'}</div></div></div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="col-dot" style="background:${st.color};width:6px;height:6px;border-radius:50%;flex-shrink:0"></div><span style="font-size:12px">${st.name}</span></div>
+      <div>${sourceTag(l.source_id)}</div>
+      <div style="font-size:12px;color:var(--text3)">${fmtDate(l.created_at)}</div>
+      <div class="act-cell">
+        <button class="btn btn-ghost btn-xs" onclick="openLead('${l.id}')">Ver</button>
+        <button class="btn btn-danger btn-xs" onclick="doDeleteLead('${l.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard(c){
+  const leads=myLeads();const total=leads.length;
+  const fech=leads.filter(l=>l.column_id==='fech').length;
+  const today=leads.filter(needsToday).length;
+  const resp=leads.filter(l=>l.column_id==='resp').length;
+  const taxa=total?Math.round(fech/total*100):0;
+  let html=`<div class="sec-row"><div><div class="sec-title">Dashboard</div><div class="sec-sub">Visão geral em tempo real</div></div></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-lbl">Total de Leads</div><div class="stat-val">${total}</div><div class="stat-desc">todos os estágios</div></div>
+    <div class="stat-card"><div class="stat-lbl">Fechamentos</div><div class="stat-val" style="color:var(--green)">${fech}</div><div class="stat-desc">${taxa}% de conversão</div></div>
+    <div class="stat-card"><div class="stat-lbl">Pendentes Hoje</div><div class="stat-val" style="color:var(--red)">${today}</div><div class="stat-desc">precisam de contato</div></div>
+    <div class="stat-card"><div class="stat-lbl">Respondendo</div><div class="stat-val">${resp}</div><div class="stat-desc">engajados</div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">Funil por Etapa</div>`;
+  C.stages.forEach(st=>{
+    const cnt=leads.filter(l=>l.column_id===st.id).length;const pct=total?Math.round(cnt/total*100):0;
+    html+=`<div class="bar-row"><div class="bar-labels"><span>${st.name}</span><span>${cnt}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${st.color}"></div></div></div>`;
+  });
+  html+=`</div><div class="chart-card"><div class="chart-title">Por Origem</div>`;
+  C.sources.forEach(s=>{
+    const cnt=leads.filter(l=>l.source_id===s.id).length;const pct=total?Math.round(cnt/total*100):0;
+    html+=`<div class="bar-row"><div class="bar-labels"><span>${s.label}</span><span>${cnt}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#fff"></div></div></div>`;
+  });
+  html+=`</div></div>`;
+  if(CU.role==='gestor'){
+    html+=`<div class="chart-card" style="margin-top:12px"><div class="chart-title">Por Vendedor</div>`;
+    C.users.filter(u=>u.role==='vendedor').forEach(u=>{
+      const cnt=leads.filter(l=>l.vendedor_id===u.login_id).length;const pct=total?Math.round(cnt/total*100):0;
+      html+=`<div class="bar-row"><div class="bar-labels"><span>${u.name}</span><span>${cnt}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#aaa"></div></div></div>`;
+    });
+    html+=`</div>`;
+  }
+  c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════
+// SCRIPTS
+// ═══════════════════════════════════════════
+function renderScripts(c){
+  let scripts=[...C.scripts];
+  // Filter by what user can see
+  scripts=scripts.filter(s=>s.target_role==='all'||s.target_role===CU.role);
+  if(scriptFilter) scripts=scripts.filter(s=>s.stage_id===scriptFilter);
+
+  const stageOpts=C.stages.map(s=>`<option value="${s.id}" ${scriptFilter===s.id?'selected':''}>${s.name}</option>`).join('');
+  let html=`<div class="sec-row">
+    <div><div class="sec-title">Scripts & Templates</div><div class="sec-sub">Mensagens prontas por etapa. Clique em "Copiar" no modal do lead.</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select style="font-size:12px;max-width:180px" onchange="scriptFilter=this.value;renderScripts(document.getElementById('content'))"><option value="">Todas as etapas</option>${stageOpts}</select>
+      <button class="btn btn-primary btn-sm" onclick="openScriptModal()">+ Novo Script</button>
+    </div>
+  </div>`;
+  if(!scripts.length){ html+=`<div class="empty"><div class="empty-icon">💬</div>Nenhum script encontrado.<br><br><button class="btn btn-ghost btn-sm" onclick="openScriptModal()">Criar primeiro script</button></div>`; c.innerHTML=html; return; }
+  scripts.forEach(s=>{
+    const st=s.stage_id?stageById(s.stage_id):null;
+    const creator=C.users.find(u=>u.login_id===s.created_by);
+    const canEdit=CU.role==='gestor'||s.created_by===CU.login_id;
+    const roleBadge=s.target_role==='all'?`<span class="badge badge-all">Todos</span>`:s.target_role==='vendedor'?`<span class="badge badge-vend">Vendedores</span>`:`<span class="badge badge-gest">Gestores</span>`;
+    const stageBadge=st?`<span class="badge badge-all" style="border-color:rgba(255,255,255,.15)">${st.name}</span>`:'';
+    html+=`<div class="script-item">
+      <div class="script-header">
+        <div class="script-title">${s.title}</div>
+        <div class="script-meta">${stageBadge}${roleBadge}</div>
+      </div>
+      <div class="script-body">${s.body}</div>
+      <div class="script-actions">
+        <button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText(${JSON.stringify(s.body)}).then(()=>toast('Copiado!','success'))">📋 Copiar</button>
+        ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openScriptModal('${s.id}')">Editar</button><button class="btn btn-danger btn-xs" onclick="doDeleteScript('${s.id}')">Excluir</button>`:''}
+        ${creator?`<span style="font-size:11px;color:var(--text3);margin-left:auto">por ${creator.name}</span>`:''}
+      </div>
+    </div>`;
+  });
+  c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════
+// LEAD MODAL
+// ═══════════════════════════════════════════
+function openLead(id){
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  document.getElementById('m-title').textContent=l.name;
+  document.getElementById('modal-inner').className='modal';
+  document.getElementById('m-body').innerHTML=`
+    <div class="modal-tabs">
+      <button class="m-tab active" onclick="mTab('info','${id}')">Informações</button>
+      <button class="m-tab" onclick="mTab('scripts','${id}')">Scripts</button>
+      <button class="m-tab" onclick="mTab('msgs','${id}')">Mensagens (${(l.messages||[]).length})</button>
+      <button class="m-tab" onclick="mTab('notes','${id}')">Notas (${(l.notes||[]).length})</button>
+      <button class="m-tab" onclick="mTab('hist','${id}')">Histórico</button>
+    </div><div id="tab-c">${renderLeadInfo(l)}</div>`;
+  openModal();
+}
+function renderLeadInfo(l){
+  const fst=followStatus(l);
+  const alertBox=fst==='urgent'?`<div class="info-box urgent">● Na Lista do Dia — precisa de contato agora!</div>`:fst==='soon'?`<div class="info-box warn">● Precisará de contato amanhã</div>`:'';
+  const vendors=C.users.filter(u=>u.role==='vendedor');
+  return`${alertBox}
+    <div class="row2">
+      <div class="field"><label>Nome</label><input value="${l.name}" onchange="updateLeadField('${l.id}','name',this.value)"></div>
+      <div class="field"><label>Telefone (WhatsApp)</label><input value="${l.phone||''}" placeholder="11999999999" onchange="updateLeadField('${l.id}','phone',this.value)"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Instagram</label><input value="${l.instagram||''}" placeholder="@usuario" onchange="updateLeadField('${l.id}','instagram',this.value)"></div>
+      <div class="field"><label>Origem</label><select onchange="updateLeadField('${l.id}','source_id',this.value)">${C.sources.map(s=>`<option value="${s.id}" ${l.source_id===s.id?'selected':''}>${s.label}</option>`).join('')}</select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Etapa</label><select onchange="doMoveTo('${l.id}',this.value)">${C.stages.map(s=>`<option value="${s.id}" ${l.column_id===s.id?'selected':''}>${s.name}</option>`).join('')}</select></div>
+      <div class="field"><label>Responsável</label><select onchange="updateLeadField('${l.id}','vendedor_id',this.value)"><option value="">Sem responsável</option>${vendors.map(u=>`<option value="${u.login_id}" ${l.vendedor_id===u.login_id?'selected':''}>${u.name}</option>`).join('')}</select></div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-success btn-sm" onclick="doMarkResp('${l.id}');closeModal()">✓ Respondeu</button>
+      ${l.phone?`<a class="btn btn-ghost btn-sm" href="${waLink(l.phone)}" target="_blank">💬 WhatsApp</a>`:''}
+      <button class="btn btn-danger btn-sm" onclick="doMoveTo('${l.id}','perd');closeModal()">✕ Perdido</button>
+      <button class="btn btn-danger btn-sm" onclick="doDeleteLead('${l.id}')" style="margin-left:auto">🗑 Excluir</button>
+    </div>`;
+}
+function mTab(tab,id){
+  document.querySelectorAll('.m-tab').forEach((t,i)=>t.classList.toggle('active',['info','scripts','msgs','notes','hist'][i]===tab));
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  const tc=document.getElementById('tab-c');
+  if(tab==='info'){tc.innerHTML=renderLeadInfo(l);}
+  else if(tab==='scripts'){
+    // Show scripts matching this lead's stage + visible to user's role
+    const stScripts=C.scripts.filter(s=>(s.stage_id===l.column_id||!s.stage_id)&&(s.target_role==='all'||s.target_role===CU.role));
+    if(!stScripts.length){tc.innerHTML=`<div class="script-empty">Nenhum script para esta etapa.<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openScriptModal()">Criar script</button></div>`;return;}
+    tc.innerHTML=stScripts.map(s=>{
+      const txt=s.body.replaceAll('{nome}',l.name.split(' ')[0]);
+      return`<div class="script-item">
+        <div class="script-header"><div class="script-title">${s.title}</div>${s.stage_id?`<span class="badge badge-all">${stageById(s.stage_id).name}</span>`:''}</div>
+        <div class="script-body">${txt}</div>
+        <button class="btn btn-primary btn-xs" onclick="navigator.clipboard.writeText(${JSON.stringify(txt)}).then(()=>toast('Script copiado! Cole no WhatsApp.','success'))">📋 Copiar script</button>
+      </div>`;
+    }).join('');
+  }
+  else if(tab==='msgs'){
+    const msgs=l.messages||[];
+    tc.innerHTML=`<div style="margin-bottom:12px">${!msgs.length?'<div class="empty" style="padding:16px">Nenhuma mensagem</div>':[...msgs].reverse().map(m=>`<div class="msg-item"><div class="item-date">${fmtDT(m.created_at)}</div><div class="item-text">${m.text}</div></div>`).join('')}</div>
+      <textarea id="nmsg" placeholder="Registrar mensagem enviada..." rows="3" style="margin-bottom:8px"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="doAddMsg('${id}')">Registrar</button>`;
+  }
+  else if(tab==='notes'){
+    const notes=l.notes||[];
+    tc.innerHTML=`<div style="margin-bottom:12px">${!notes.length?'<div class="empty" style="padding:16px">Nenhuma nota</div>':[...notes].reverse().map(n=>`<div class="note-item"><div class="item-date">${fmtDT(n.created_at)} · ${n.author||'—'}</div><div class="item-text">${n.text}</div></div>`).join('')}</div>
+      <textarea id="nnote" placeholder="Nota interna (não enviada ao lead)..." rows="3" style="margin-bottom:8px"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="doAddNote('${id}')">Salvar Nota</button>`;
+  }
+  else if(tab==='hist'){
+    const h=l.history||[];
+    tc.innerHTML=!h.length?'<div class="empty">Sem histórico</div>':[...h].map(e=>`<div class="hist-item"><div class="hist-time">${fmtDT(e.created_at)}</div><div class="hist-action">${e.action}</div></div>`).join('');
+  }
+}
+async function updateLeadField(id,field,val){
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  l[field]=val;
+  try{await DB.updateLead(id,{[field]:val||null});}catch(e){toast('Erro ao salvar','error');}
+}
+async function doAddMsg(id){
+  const txt=document.getElementById('nmsg')?.value.trim();if(!txt)return;
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  l.messages=l.messages||[];l.messages.push({created_at:new Date().toISOString(),text:txt});
+  l.last_contact=new Date().toISOString();
+  mTab('msgs',id);refreshBadge();
+  try{await DB.addMessage(id,txt);toast('Mensagem registrada!','success');}catch(e){toast('Erro','error');}
+}
+async function doAddNote(id){
+  const txt=document.getElementById('nnote')?.value.trim();if(!txt)return;
+  const l=C.leads.find(x=>x.id===id);if(!l)return;
+  l.notes=l.notes||[];l.notes.push({created_at:new Date().toISOString(),text:txt,author:CU.name});
+  mTab('notes',id);
+  try{await DB.addNote(id,txt,CU.name);toast('Nota salva!','success');}catch(e){toast('Erro','error');}
+}
+async function doDeleteLead(id){
+  if(!confirm('Excluir este lead permanentemente?'))return;
+  C.leads=C.leads.filter(l=>l.id!==id);closeModal();rerender(true);refreshBadge();
+  try{await DB.deleteLead(id);toast('Lead excluído','success');}catch(e){toast('Erro ao excluir','error');}
+}
+
+// ═══════════════════════════════════════════
+// NEW LEAD
+// ═══════════════════════════════════════════
+function openNewLead(){
+  document.getElementById('m-title').textContent='Novo Lead';
+  document.getElementById('modal-inner').className='modal';
+  const vendors=C.users.filter(u=>u.role==='vendedor');
+  document.getElementById('m-body').innerHTML=`
+    <div class="row2"><div class="field"><label>Nome *</label><input id="nl-name" placeholder="Nome do lead"></div><div class="field"><label>Telefone (WhatsApp)</label><input id="nl-phone" placeholder="11999999999"></div></div>
+    <div class="row2"><div class="field"><label>Instagram</label><input id="nl-ig" placeholder="@usuario"></div><div class="field"><label>Origem *</label><select id="nl-src">${C.sources.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select></div></div>
+    <div class="row2"><div class="field"><label>Etapa inicial</label><select id="nl-col">${C.stages.filter(s=>s.id!=='perd').map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div><div class="field"><label>Responsável</label><select id="nl-vend"><option value="">Sem responsável</option>${vendors.map(u=>`<option value="${u.login_id}" ${u.login_id===CU.login_id&&CU.role==='vendedor'?'selected':''}>${u.name}</option>`).join('')}</select></div></div>
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" id="save-lead-btn" onclick="doSaveLead()">Cadastrar Lead →</button>`;
+  openModal();
+}
+async function doSaveLead(){
+  const name=document.getElementById('nl-name').value.trim();if(!name){toast('Nome é obrigatório','error');return;}
+  const btn=document.getElementById('save-lead-btn');btn.disabled=true;btn.textContent='Salvando...';
+  try{
+    const lead=await DB.insertLead({name,phone:document.getElementById('nl-phone').value.trim(),instagram:document.getElementById('nl-ig').value.trim(),source_id:document.getElementById('nl-src').value,column_id:document.getElementById('nl-col').value,vendedor_id:document.getElementById('nl-vend').value});
+    closeModal();await rerender();toast(`Lead "${name}" cadastrado!`,'success');
+  }catch(e){toast('Erro ao cadastrar: '+e.message,'error');btn.disabled=false;btn.textContent='Cadastrar Lead →';}
+}
+
+// ═══════════════════════════════════════════
+// SCRIPT MODAL
+// ═══════════════════════════════════════════
+function openScriptModal(id){
+  const s=id?C.scripts.find(x=>x.id===id):null;
+  document.getElementById('m-title').textContent=s?'Editar Script':'Novo Script';
+  document.getElementById('modal-inner').className='modal';
+  const roleField=CU.role==='gestor'?`<div class="field"><label>Visível para</label><select id="sm-role"><option value="all" ${!s||s.target_role==='all'?'selected':''}>Todos</option><option value="vendedor" ${s?.target_role==='vendedor'?'selected':''}>Apenas Vendedores</option><option value="gestor" ${s?.target_role==='gestor'?'selected':''}>Apenas Gestores</option></select></div>`:'<input type="hidden" id="sm-role" value="all">';
+  document.getElementById('m-body').innerHTML=`
+    <div class="field"><label>Título do Script *</label><input id="sm-title" value="${s?.title||''}" placeholder="Ex: Primeiro contato padrão"></div>
+    <div class="field"><label>Etapa (opcional — deixe em branco para aparecer em todas)</label><select id="sm-stage"><option value="">Todas as etapas</option>${C.stages.map(st=>`<option value="${st.id}" ${s?.stage_id===st.id?'selected':''}>${st.name}</option>`).join('')}</select></div>
+    ${roleField}
+    <div class="field"><label>Texto da mensagem * (use {nome} para o primeiro nome do lead)</label><textarea id="sm-body" rows="5" placeholder="Olá {nome}! ...">${s?.body||''}</textarea></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Use <strong style="color:var(--text2)">{nome}</strong> para inserir o primeiro nome automaticamente.</div>
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" id="save-script-btn" onclick="doSaveScript('${id||''}')">Salvar Script</button>`;
+  openModal();
+}
+async function doSaveScript(id){
+  const title=document.getElementById('sm-title').value.trim();
+  const body=document.getElementById('sm-body').value.trim();
+  if(!title||!body){toast('Preencha título e mensagem','error');return;}
+  const btn=document.getElementById('save-script-btn');btn.disabled=true;btn.textContent='Salvando...';
+  const obj={title,body,stage_id:document.getElementById('sm-stage').value||null,target_role:document.getElementById('sm-role').value,created_by:CU.login_id};
+  if(id) obj.id=id;
+  try{
+    await DB.upsertScript(obj);await loadAll();closeModal();
+    if(curView==='scripts')renderScripts(document.getElementById('content'));
+    toast('Script salvo!','success');
+  }catch(e){toast('Erro: '+e.message,'error');btn.disabled=false;btn.textContent='Salvar Script';}
+}
+async function doDeleteScript(id){
+  if(!confirm('Excluir este script?'))return;
+  C.scripts=C.scripts.filter(s=>s.id!==id);
+  if(curView==='scripts')renderScripts(document.getElementById('content'));
+  try{await DB.deleteScript(id);toast('Script excluído','success');}catch(e){toast('Erro','error');}
+}
+
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+function renderConfig(c){
+  if(CU.role!=='gestor'){c.innerHTML='<div class="empty">Acesso negado</div>';return;}
+  let html=`<div class="sec-row"><div><div class="sec-title">Configurações</div><div class="sec-sub">Etapas, origens e usuários</div></div></div>
+  <div class="cfg-tabs">
+    <button class="cfg-tab ${cfgTab==='stages'?'active':''}" onclick="cfgTab='stages';renderConfig(document.getElementById('content'))">Etapas do Kanban</button>
+    <button class="cfg-tab ${cfgTab==='sources'?'active':''}" onclick="cfgTab='sources';renderConfig(document.getElementById('content'))">Origens</button>
+    <button class="cfg-tab ${cfgTab==='users'?'active':''}" onclick="cfgTab='users';renderConfig(document.getElementById('content'))">Usuários</button>
+  </div>`;
+  if(cfgTab==='stages'){
+    html+=`<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button class="btn btn-primary btn-sm" onclick="openStageModal()">+ Nova Etapa</button></div>
+    <div class="cfg-table">
+      <div class="cfg-row cfg-head"><div class="name-cell">Etapa</div><div class="meta-cell">Follow-up</div><div class="row-actions"></div></div>`;
+    C.stages.forEach(st=>{
+      html+=`<div class="cfg-row"><div class="name-cell" style="display:flex;align-items:center;gap:8px"><div class="dot-preview" style="background:${st.color}"></div>${st.name}</div><div class="meta-cell">${st.follow_days?st.follow_days+'d':'—'}</div><div class="row-actions"><button class="btn btn-ghost btn-xs" onclick="openStageModal('${st.id}')">Editar</button><button class="btn btn-danger btn-xs" onclick="doDeleteStage('${st.id}')">Excluir</button></div></div>`;
+    });
+    html+=`</div>`;
+  }else if(cfgTab==='sources'){
+    html+=`<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button class="btn btn-primary btn-sm" onclick="openSourceModal()">+ Nova Origem</button></div>
+    <div class="cfg-table">
+      <div class="cfg-row cfg-head"><div class="name-cell">Origem</div><div class="meta-cell">ID</div><div class="row-actions"></div></div>`;
+    C.sources.forEach(s=>{
+      html+=`<div class="cfg-row"><div class="name-cell">${s.label}</div><div class="meta-cell" style="font-size:11px;color:var(--text3);font-family:monospace">${s.id}</div><div class="row-actions"><button class="btn btn-ghost btn-xs" onclick="openSourceModal('${s.id}')">Editar</button><button class="btn btn-danger btn-xs" onclick="doDeleteSource('${s.id}')">Excluir</button></div></div>`;
+    });
+    html+=`</div>`;
+  }else if(cfgTab==='users'){
+    html+=`<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Novo Usuário</button></div>
+    <div class="cfg-table">
+      <div class="cfg-row cfg-head"><div class="name-cell">Nome</div><div class="meta-cell">Login</div><div class="meta-cell">Perfil</div><div class="row-actions"></div></div>`;
+    C.users.forEach(u=>{
+      html+=`<div class="cfg-row"><div class="name-cell">${u.name}</div><div class="meta-cell" style="font-size:12px;color:var(--text3)">@${u.login_id}</div><div class="meta-cell" style="font-size:12px">${u.role==='gestor'?'★ Gestor':'Vendedor'}</div><div class="row-actions"><button class="btn btn-ghost btn-xs" onclick="openUserModal('${u.login_id}')">Editar</button>${u.login_id!==CU.login_id?`<button class="btn btn-danger btn-xs" onclick="doDeleteUser('${u.login_id}')">Excluir</button>`:''}</div></div>`;
+    });
+    html+=`</div>`;
+  }
+  c.innerHTML=html;
+}
+
+// Stage CRUD
+function openStageModal(id){
+  const st=id?C.stages.find(s=>s.id===id):null;
+  document.getElementById('m-title').textContent=st?'Editar Etapa':'Nova Etapa';
+  document.getElementById('modal-inner').className='modal';
+  document.getElementById('m-body').innerHTML=`
+    <div class="field"><label>Nome da Etapa *</label><input id="cm-name" value="${st?.name||''}"></div>
+    <div class="field"><label>Follow-up após X dias sem resposta (vazio = desativado)</label><input type="number" id="cm-fd" min="0" max="30" value="${st?.follow_days||''}" placeholder="ex: 2"></div>
+    <div class="field"><label>Cor</label><div class="color-picker-row">${PRESET_COLORS.map(clr=>`<div class="color-opt${(st?.color||PRESET_COLORS[0])===clr?' sel':''}" style="background:${clr}" onclick="document.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('sel'));this.classList.add('sel');document.getElementById('cm-color').value='${clr}'"></div>`).join('')}</div><input type="hidden" id="cm-color" value="${st?.color||PRESET_COLORS[0]}"></div>
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" id="save-stage-btn" onclick="doSaveStage('${id||''}')">Salvar Etapa</button>`;
+  openModal();
+}
+async function doSaveStage(id){
+  const name=document.getElementById('cm-name').value.trim();if(!name){toast('Nome é obrigatório','error');return;}
+  const btn=document.getElementById('save-stage-btn');btn.disabled=true;btn.textContent='Salvando...';
+  const obj={id:id||genId(),name,color:document.getElementById('cm-color').value,follow_days:parseInt(document.getElementById('cm-fd').value)||null,position:id?(C.stages.find(s=>s.id===id)?.position||0):C.stages.length};
+  try{
+    await DB.upsertStage(obj);await loadAll();closeModal();renderConfig(document.getElementById('content'));toast('Etapa salva!','success');
+  }catch(e){toast('Erro: '+e.message,'error');btn.disabled=false;btn.textContent='Salvar Etapa';}
+}
+async function doDeleteStage(id){
+  if(C.stages.length<=1){toast('Precisa ter pelo menos 1 etapa','error');return;}
+  if(!confirm('Excluir esta etapa? Os leads serão movidos para a primeira.'))return;
+  const first=C.stages.find(s=>s.id!==id);
+  try{
+    await Promise.all(C.leads.filter(l=>l.column_id===id).map(l=>DB.updateLead(l.id,{column_id:first.id})));
+    await DB.deleteStage(id);await loadAll();renderConfig(document.getElementById('content'));toast('Etapa excluída','success');
+  }catch(e){toast('Erro: '+e.message,'error');}
+}
+
+// Source CRUD
+function openSourceModal(id){
+  const src=id?C.sources.find(s=>s.id===id):null;
+  document.getElementById('m-title').textContent=src?'Editar Origem':'Nova Origem';
+  document.getElementById('modal-inner').className='modal modal-sm';
+  document.getElementById('m-body').innerHTML=`
+    ${!src?`<div class="field"><label>ID (sem espaços/acentos) *</label><input id="sm-id" placeholder="ex: linkedin"></div>`:''}
+    <div class="field"><label>Nome *</label><input id="sm-label" value="${src?.label||''}"></div>
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" id="save-src-btn" onclick="doSaveSource('${id||''}')">Salvar</button>`;
+  openModal();
+}
+async function doSaveSource(id){
+  const label=document.getElementById('sm-label').value.trim();if(!label){toast('Nome é obrigatório','error');return;}
+  const btn=document.getElementById('save-src-btn');btn.disabled=true;
+  const sid=id||document.getElementById('sm-id').value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if(!sid){toast('ID inválido','error');btn.disabled=false;return;}
+  try{
+    await DB.upsertSource({id:sid,label});await loadAll();closeModal();renderConfig(document.getElementById('content'));toast('Origem salva!','success');
+  }catch(e){toast('Erro: '+e.message,'error');btn.disabled=false;}
+}
+async function doDeleteSource(id){
+  if(!confirm('Excluir esta origem?'))return;
+  try{await DB.deleteSource(id);await loadAll();renderConfig(document.getElementById('content'));toast('Origem excluída','success');}catch(e){toast('Erro','error');}
+}
+
+// User CRUD
+function openUserModal(id){
+  const u=id?C.users.find(x=>x.login_id===id):null;
+  document.getElementById('m-title').textContent=u?'Editar Usuário':'Novo Usuário';
+  document.getElementById('modal-inner').className='modal modal-sm';
+  document.getElementById('m-body').innerHTML=`
+    ${!u?`<div class="field"><label>ID de login (sem espaços) *</label><input id="um-id" placeholder="vendedor3"></div>`:''}
+    <div class="field"><label>Nome completo *</label><input id="um-name" value="${u?.name||''}"></div>
+    <div class="field"><label>${u?'Nova senha (vazio = manter atual)':'Senha *'}</label><input type="password" id="um-pass" placeholder="••••••••"></div>
+    <div class="field"><label>Perfil</label><select id="um-role"><option value="vendedor" ${u?.role!=='gestor'?'selected':''}>Vendedor</option><option value="gestor" ${u?.role==='gestor'?'selected':''}>Gestor</option></select></div>
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" id="save-user-btn" onclick="doSaveUser('${id||''}')">Salvar Usuário</button>`;
+  openModal();
+}
+async function doSaveUser(id){
+  const name=document.getElementById('um-name').value.trim();const pass=document.getElementById('um-pass').value.trim();const role=document.getElementById('um-role').value;
+  if(!name){toast('Nome é obrigatório','error');return;}
+  const btn=document.getElementById('save-user-btn');btn.disabled=true;
+  const lid=id||document.getElementById('um-id').value.trim().replace(/\s+/g,'');
+  if(!lid){toast('ID obrigatório','error');btn.disabled=false;return;}
+  const obj={login_id:lid,name,role};if(pass) obj.pass=pass;else if(!id){toast('Senha obrigatória','error');btn.disabled=false;return;}
+  if(id){const existing=C.users.find(u=>u.login_id===id);if(!pass) obj.pass=existing.pass;}
+  try{
+    await DB.upsertUser(obj);await loadAll();closeModal();renderConfig(document.getElementById('content'));toast('Usuário salvo!','success');
+  }catch(e){toast('Erro: '+e.message,'error');btn.disabled=false;}
+}
+async function doDeleteUser(lid){
+  if(lid===CU.login_id){toast('Não pode excluir a si mesmo','error');return;}
+  if(!confirm('Excluir este usuário?'))return;
+  try{await DB.deleteUser(lid);await loadAll();renderConfig(document.getElementById('content'));toast('Usuário excluído','success');}catch(e){toast('Erro','error');}
+}
+
+// ═══════════════════════════════════════════
+// MODAL UTILS
+// ═══════════════════════════════════════════
+function openModal(){document.getElementById('modal-ov').classList.add('open');}
+function closeModal(){document.getElementById('modal-ov').classList.remove('open');}
+function closeModalOutside(e){if(e.target.id==='modal-ov')closeModal();}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function toast(msg,type='success'){
+  const w=document.getElementById('toasts');const el=document.createElement('div');
+  el.className=`toast ${type}`;el.innerHTML=`${type==='success'?'✓':type==='error'?'⚠':'ℹ'} ${msg}`;
+  w.appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(80px)';el.style.transition='all .25s';setTimeout(()=>el.remove(),260);},2800);
+}
+
+// ═══════════════════════════════════════════
+// CURSOR
+// ═══════════════════════════════════════════
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function ar(){rx+=(mx-rx)*.14;ry+=(my-ry)*.14;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(ar);})();
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  if(initSB()){
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+  }
+});
+</script>
+</body>
+</html>
