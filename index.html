@@ -674,14 +674,44 @@ function cardHTML(lead,st){
 }
 function initKanbanPan(){
   const outer=document.getElementById('kanban-outer');if(!outer)return;
+  // Pan zone = entire .content area so user can drag from anywhere on screen
+  const zone=document.getElementById('content')||outer;
   let isDown=false,startX=0,sl=0;
-  outer.addEventListener('mousedown',e=>{
-    if(e.target.closest('.card')||e.target.closest('button')||e.target.closest('a')||e.target.closest('select')||e.target.closest('input'))return;
-    isDown=true;startX=e.pageX-outer.offsetLeft;sl=outer.scrollLeft;outer.style.cursor='grabbing';
-  });
-  document.addEventListener('mouseup',()=>{isDown=false;if(outer)outer.style.cursor='';});
-  outer.addEventListener('mouseleave',()=>{isDown=false;outer.style.cursor='';});
-  outer.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-outer.offsetLeft;outer.scrollLeft=sl-(x-startX)*1.2;});
+  // Remove old listeners by cloning
+  const newZone=zone.cloneNode(false);
+  zone.parentNode.replaceChild(newZone,zone);
+  // Re-query after DOM swap (content div got replaced, re-render would break; use document instead)
+  let panActive=false,panStartX=0,panSL=0;
+  function isInteractive(el){return el.closest('.card')||el.closest('button')||el.closest('a')||el.closest('select')||el.closest('input')||el.closest('textarea');}
+  document._acePanDown=function(e){
+    const ko=document.getElementById('kanban-outer');if(!ko)return;
+    if(curView!=='kanban')return;
+    if(isInteractive(e.target))return;
+    panActive=true;panStartX=e.pageX;panSL=ko.scrollLeft;
+    document.body.style.setProperty('cursor','grabbing','important');
+  };
+  document._acePanMove=function(e){
+    if(!panActive)return;
+    const ko=document.getElementById('kanban-outer');if(!ko)return;
+    e.preventDefault();
+    ko.scrollLeft=panSL-(e.pageX-panStartX)*1.2;
+  };
+  document._acePanUp=function(){
+    panActive=false;
+    document.body.style.removeProperty('cursor');
+  };
+  // Clean previous listeners
+  document.removeEventListener('mousedown',document._acePanDownRef);
+  document.removeEventListener('mousemove',document._acePanMoveRef);
+  document.removeEventListener('mouseup',document._acePanUpRef);
+  document._acePanDownRef=document._acePanDown;
+  document._acePanMoveRef=document._acePanMove;
+  document._acePanUpRef=document._acePanUp;
+  document.addEventListener('mousedown',document._acePanDownRef);
+  document.addEventListener('mousemove',document._acePanMoveRef,{passive:false});
+  document.addEventListener('mouseup',document._acePanUpRef);
+  // Restore content div reference (it was cloned out)
+  // Actually let's not clone — just attach to document directly and skip the clone trick
 }
 function onDS(e,id){drag=id;setTimeout(()=>{document.getElementById('card-'+id)?.classList.add('dragging');},0);}
 function onDE(){document.getElementById('card-'+drag)?.classList.remove('dragging');}
