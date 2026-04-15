@@ -44,6 +44,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 input,select,textarea{width:100%;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
 input:focus,select:focus,textarea:focus{border-color:rgba(255,255,255,.35);box-shadow:0 0 0 3px rgba(255,255,255,.04);}
 input::placeholder,textarea::placeholder{color:var(--text3);}
+input[type=checkbox]{accent-color:#fff;width:auto;padding:0;}
 select option{background:#0a0a0a;color:#fff;}
 label{display:block;font-size:10px;color:var(--text2);margin-bottom:5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 .field{margin-bottom:14px;}
@@ -236,61 +237,6 @@ nav{padding:8px 0;flex:1;}
 <body>
 <div id="cursor"></div><div id="cursor-ring"></div>
 
-<!-- SETUP SCREEN -->
-<div id="setup-screen">
-  <div class="setup-wrap">
-    <div class="setup-logo">ACE<em> — CRM</em></div>
-    <div class="setup-sub">Configuração inicial do banco de dados</div>
-
-    <div class="setup-card">
-      <div class="setup-form-title">📡 Conectar ao Supabase</div>
-      <div class="field"><label>URL do Projeto Supabase</label><input id="sb-url" placeholder="https://xxxxxxxxxxxxxxxx.supabase.co"></div>
-      <div class="field"><label>Chave Anon (anon / public key)</label><input id="sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></div>
-      <button class="btn btn-primary btn-full" onclick="testConn()">Testar conexão →</button>
-      <div id="conn-status" class="conn-status"></div>
-    </div>
-
-    <div class="setup-card">
-      <div class="setup-form-title">📋 Como configurar em 5 passos</div>
-      <div class="setup-step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <div class="step-title">Criar conta gratuita</div>
-          <div class="step-desc">Acesse <a class="step-link" href="https://supabase.com" target="_blank">supabase.com</a> → Sign up (use sua conta Google)</div>
-        </div>
-      </div>
-      <div class="setup-step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <div class="step-title">Criar novo projeto</div>
-          <div class="step-desc">Clique em "New Project" → dê um nome (ex: ace-crm) → escolha uma região próxima (South America) → defina uma senha forte</div>
-        </div>
-      </div>
-      <div class="setup-step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <div class="step-title">Executar o SQL de configuração</div>
-          <div class="step-desc">No menu lateral do Supabase: SQL Editor → New Query → cole o conteúdo do arquivo <strong>ace-crm-setup.sql</strong> → Run (▶)</div>
-        </div>
-      </div>
-      <div class="setup-step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <div class="step-title">Copiar as credenciais</div>
-          <div class="step-desc">Menu lateral: Settings → API → copie a "Project URL" e a "anon public" key</div>
-        </div>
-      </div>
-      <div class="setup-step" style="margin-bottom:0">
-        <div class="step-num">5</div>
-        <div class="step-body">
-          <div class="step-title">Cole acima e clique em "Testar conexão"</div>
-          <div class="step-desc">Pronto! Todos os usuários da equipe acessarão os mesmos dados em tempo real.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
@@ -298,8 +244,11 @@ nav{padding:8px 0;flex:1;}
     <div class="login-sub">Prospecção Inteligente</div>
     <div class="field"><label>Usuário</label><input type="text" id="lu" placeholder="ID ou nome"></div>
     <div class="field"><label>Senha</label><input type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <input type="checkbox" id="remember-me" style="width:16px;height:16px;padding:0;accent-color:#fff;flex-shrink:0">
+      <label for="remember-me" style="font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0;margin:0;font-weight:400">Lembrar meu login</label>
+    </div>
     <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">Entrar →</button>
-    <div class="login-hint">Problemas? <a href="#" onclick="resetSetup()">Reconfigurar banco de dados</a></div>
   </div>
 </div>
 
@@ -348,43 +297,12 @@ nav{padding:8px 0;flex:1;}
 const PRESET_COLORS=['#ffffff','#cccccc','#888888','#555555','#4ade80','#f87171','#fbbf24','#60a5fa','#c084fc','#fb923c'];
 let sb = null;
 
-function initSB() {
-  const url = localStorage.getItem('ace_sb_url');
-  const key = localStorage.getItem('ace_sb_key');
-  if (!url || !key) return false;
-  sb = supabase.createClient(url, key);
-  return true;
-}
+const SB_URL = 'https://wyumildjiqfsxzyonsnh.supabase.co';
+const SB_KEY = 'sb_publishable_5j6i-nnTa0pLoi5x_ZABKg_euye1WA_';
 
-async function testConn() {
-  const url = document.getElementById('sb-url').value.trim();
-  const key = document.getElementById('sb-key').value.trim();
-  if (!url || !key) { showConnStatus('Preencha os dois campos', false); return; }
-  const btn = document.querySelector('#setup-screen .btn-primary');
-  btn.disabled = true; btn.textContent = 'Testando...';
-  try {
-    const client = supabase.createClient(url, key);
-    const {data, error} = await client.from('ace_users').select('count').limit(1);
-    if (error) throw error;
-    localStorage.setItem('ace_sb_url', url);
-    localStorage.setItem('ace_sb_key', key);
-    sb = client;
-    showConnStatus('✓ Conectado com sucesso! Redirecionando...', true);
-    setTimeout(() => { document.getElementById('setup-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; }, 1200);
-  } catch(e) {
-    showConnStatus('Erro: ' + (e.message || 'verifique a URL e a chave'), false);
-    btn.disabled = false; btn.textContent = 'Testar conexão →';
-  }
-}
-function showConnStatus(msg, ok) {
-  const el = document.getElementById('conn-status');
-  el.className = 'conn-status ' + (ok ? 'ok' : 'err');
-  el.textContent = msg;
-}
-function resetSetup() {
-  localStorage.removeItem('ace_sb_url'); localStorage.removeItem('ace_sb_key');
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('setup-screen').style.display='flex';
+function initSB() {
+  sb = supabase.createClient(SB_URL, SB_KEY);
+  return true;
 }
 
 // ═══════════════════════════════════════════
@@ -554,6 +472,12 @@ async function doLogin(){
     const u=C.users.find(x=>x.login_id===uid||x.name.toLowerCase()===uid.toLowerCase());
     if(!u||u.pass!==pwd){toast('Usuário ou senha incorretos','error');btn.disabled=false;btn.textContent='Entrar →';return;}
     CU=u;
+    // Handle remember me
+    if(document.getElementById('remember-me')?.checked){
+      localStorage.setItem('ace_remember', JSON.stringify({login_id:u.login_id, pass:u.pass}));
+    } else {
+      localStorage.removeItem('ace_remember');
+    }
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('su-name').textContent=u.name;
@@ -673,16 +597,32 @@ function cardHTML(lead,st){
   </div>`;
 }
 function initKanbanPan(){
-  const outer=document.getElementById('kanban-outer');if(!outer)return;
-  // Pan zone = entire .content area so user can drag from anywhere on screen
-  const zone=document.getElementById('content')||outer;
-  let isDown=false,startX=0,sl=0;
-  // Remove old listeners by cloning
-  const newZone=zone.cloneNode(false);
-  zone.parentNode.replaceChild(newZone,zone);
-  // Re-query after DOM swap (content div got replaced, re-render would break; use document instead)
+  if(window._acePanDown) document.removeEventListener('mousedown',window._acePanDown);
+  if(window._acePanMove) document.removeEventListener('mousemove',window._acePanMove);
+  if(window._acePanUp)   document.removeEventListener('mouseup',  window._acePanUp);
   let panActive=false,panStartX=0,panSL=0;
-  function isInteractive(el){return el.closest('.card')||el.closest('button')||el.closest('a')||el.closest('select')||el.closest('input')||el.closest('textarea');}
+  function isInteractive(el){
+    return el.closest('.card')||el.closest('button')||el.closest('a')||
+           el.closest('select')||el.closest('input')||el.closest('textarea')||
+           el.closest('.modal-ov')||el.closest('.sidebar')||el.closest('.topbar');
+  }
+  window._acePanDown=function(e){
+    if(curView!=='kanban')return;
+    if(isInteractive(e.target))return;
+    const ko=document.getElementById('kanban-outer');if(!ko)return;
+    panActive=true;panStartX=e.pageX;panSL=ko.scrollLeft;
+    document.body.style.setProperty('cursor','grabbing','important');
+  };
+  window._acePanMove=function(e){
+    if(!panActive)return;
+    const ko=document.getElementById('kanban-outer');if(!ko){panActive=false;return;}
+    ko.scrollLeft=panSL-(e.pageX-panStartX)*1.2;
+  };
+  window._acePanUp=function(){panActive=false;document.body.style.removeProperty('cursor');};
+  document.addEventListener('mousedown',window._acePanDown);
+  document.addEventListener('mousemove',window._acePanMove);
+  document.addEventListener('mouseup',  window._acePanUp);
+}
   document._acePanDown=function(e){
     const ko=document.getElementById('kanban-outer');if(!ko)return;
     if(curView!=='kanban')return;
@@ -847,6 +787,16 @@ function renderDashboard(c){
   c.innerHTML=html;
 }
 
+
+// Global script cache for safe clipboard access
+window.ACE_SCRIPTS={};
+function copyScript(id){
+  const txt=window.ACE_SCRIPTS[id];
+  if(!txt){toast('Script não encontrado','error');return;}
+  navigator.clipboard.writeText(txt).then(()=>toast('Script copiado! Cole no WhatsApp.','success')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Script copiado!','success');
+  });
+}
 // ═══════════════════════════════════════════
 // SCRIPTS
 // ═══════════════════════════════════════════
@@ -865,6 +815,8 @@ function renderScripts(c){
     </div>
   </div>`;
   if(!scripts.length){ html+=`<div class="empty"><div class="empty-icon">💬</div>Nenhum script encontrado.<br><br><button class="btn btn-ghost btn-sm" onclick="openScriptModal()">Criar primeiro script</button></div>`; c.innerHTML=html; return; }
+  // Pre-load all script bodies into cache
+  scripts.forEach(s=>{window.ACE_SCRIPTS[s.id]=s.body;});
   scripts.forEach(s=>{
     const st=s.stage_id?stageById(s.stage_id):null;
     const creator=C.users.find(u=>u.login_id===s.created_by);
@@ -878,7 +830,7 @@ function renderScripts(c){
       </div>
       <div class="script-body">${s.body}</div>
       <div class="script-actions">
-        <button class="btn btn-ghost btn-xs" onclick="navigator.clipboard.writeText(${JSON.stringify(s.body)}).then(()=>toast('Copiado!','success'))">📋 Copiar</button>
+        <button class="btn btn-ghost btn-xs" onclick="window.ACE_SCRIPTS['${s.id}']=\`${s.body.replace(/`/g,'&#96;')}\`;copyScript('${s.id}')">📋 Copiar</button>
         ${canEdit?`<button class="btn btn-ghost btn-xs" onclick="openScriptModal('${s.id}')">Editar</button><button class="btn btn-danger btn-xs" onclick="doDeleteScript('${s.id}')">Excluir</button>`:''}
         ${creator?`<span style="font-size:11px;color:var(--text3);margin-left:auto">por ${creator.name}</span>`:''}
       </div>
@@ -935,15 +887,20 @@ function mTab(tab,id){
   const tc=document.getElementById('tab-c');
   if(tab==='info'){tc.innerHTML=renderLeadInfo(l);}
   else if(tab==='scripts'){
-    // Show scripts matching this lead's stage + visible to user's role
     const stScripts=C.scripts.filter(s=>(s.stage_id===l.column_id||!s.stage_id)&&(s.target_role==='all'||s.target_role===CU.role));
     if(!stScripts.length){tc.innerHTML=`<div class="script-empty">Nenhum script para esta etapa.<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openScriptModal()">Criar script</button></div>`;return;}
+    // Store texts in global cache keyed by script id
+    stScripts.forEach(s=>{
+      const txt=s.body.replaceAll('{nome}',l.name.split(' ')[0]);
+      window.ACE_SCRIPTS['modal_'+s.id]=txt;
+    });
     tc.innerHTML=stScripts.map(s=>{
       const txt=s.body.replaceAll('{nome}',l.name.split(' ')[0]);
+      const stBadge=s.stage_id?`<span class="badge badge-all">${stageById(s.stage_id).name}</span>`:'';
       return`<div class="script-item">
-        <div class="script-header"><div class="script-title">${s.title}</div>${s.stage_id?`<span class="badge badge-all">${stageById(s.stage_id).name}</span>`:''}</div>
+        <div class="script-header"><div class="script-title">${s.title}</div>${stBadge}</div>
         <div class="script-body">${txt}</div>
-        <button class="btn btn-primary btn-xs" onclick="navigator.clipboard.writeText(${JSON.stringify(txt)}).then(()=>toast('Script copiado! Cole no WhatsApp.','success'))">📋 Copiar script</button>
+        <button class="btn btn-primary btn-xs" onclick="copyScript('modal_${s.id}')">📋 Copiar script</button>
       </div>`;
     }).join('');
   }
@@ -1208,10 +1165,18 @@ document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.le
 // INIT
 // ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
-  if(initSB()){
-    document.getElementById('setup-screen').style.display='none';
-    document.getElementById('login-screen').style.display='flex';
+  initSB();
+  // Auto-login if remember me was set
+  const saved = localStorage.getItem('ace_remember');
+  if(saved){
+    try{
+      const {login_id, pass} = JSON.parse(saved);
+      document.getElementById('lu').value = login_id;
+      document.getElementById('lp').value = pass;
+      document.getElementById('remember-me').checked = true;
+    }catch(e){}
   }
+  document.getElementById('login-screen').style.display='flex';
 });
 </script>
 </body>
