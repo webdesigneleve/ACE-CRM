@@ -101,7 +101,7 @@ nav{padding:8px 0;flex:1;}
 /* ── KANBAN ── */
 .kanban-filter{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
 .kanban-filter select,.kanban-filter input{max-width:180px;font-size:12px;padding:7px 11px;}
-.kanban-outer{overflow-x:auto;padding-bottom:20px;user-select:none;}
+.kanban-outer{overflow-x:auto;padding-bottom:20px;user-select:none;height: 100vh;}
 .kanban-outer::-webkit-scrollbar{height:4px;}
 .kanban-outer::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .kanban-wrap{display:flex;gap:12px;align-items:flex-start;min-width:max-content;padding:2px 0;}
@@ -564,7 +564,7 @@ function renderKanban(c){
   if(kbVend) fl=fl.filter(l=>l.vendedor_id===kbVend);
   if(kbSearch) fl=fl.filter(l=>l.name.toLowerCase().includes(kbSearch.toLowerCase())||(l.phone||'').includes(kbSearch));
   const vSel=CU.role==='gestor'?`<select style="font-size:12px;padding:7px 11px;max-width:170px" onchange="kbVend=this.value;renderKanban(document.getElementById('content'))"><option value="">Todos os vendedores</option>${vendors.map(u=>`<option value="${u.login_id}" ${kbVend===u.login_id?'selected':''}>${u.name}</option>`).join('')}</select>`:'';
-  let html=`<div class="kanban-filter">${vSel}<input type="text" placeholder="Buscar lead..." value="${kbSearch}" oninput="kbSearch=this.value;renderKanban(document.getElementById('content'))" style="max-width:180px;font-size:12px;padding:7px 11px"></div>
+  let html=`<div class="kanban-filter">${vSel}<input type="text" placeholder="Buscar lead..." value="${kbSearch}" oninput="kbSearch=this.value;renderKanban(document.getElementById('content'))" style="max-width:100px;font-size:12px;padding:7px 11px"></div>
   <div class="kanban-outer" id="kanban-outer"><div class="kanban-wrap">`;
   C.stages.forEach(st=>{
     const cl=fl.filter(l=>l.column_id===st.id);
@@ -597,61 +597,22 @@ function cardHTML(lead,st){
   </div>`;
 }
 function initKanbanPan(){
-  if(window._acePanDown) document.removeEventListener('mousedown',window._acePanDown);
-  if(window._acePanMove) document.removeEventListener('mousemove',window._acePanMove);
-  if(window._acePanUp)   document.removeEventListener('mouseup',  window._acePanUp);
-  let panActive=false,panStartX=0,panSL=0;
-  function isInteractive(el){
-    return el.closest('.card')||el.closest('button')||el.closest('a')||
-           el.closest('select')||el.closest('input')||el.closest('textarea')||
-           el.closest('.modal-ov')||el.closest('.sidebar')||el.closest('.topbar');
-  }
-  window._acePanDown=function(e){
-    if(curView!=='kanban')return;
-    if(isInteractive(e.target))return;
-    const ko=document.getElementById('kanban-outer');if(!ko)return;
-    panActive=true;panStartX=e.pageX;panSL=ko.scrollLeft;
-    document.body.style.setProperty('cursor','grabbing','important');
-  };
-  window._acePanMove=function(e){
-    if(!panActive)return;
-    const ko=document.getElementById('kanban-outer');if(!ko){panActive=false;return;}
-    ko.scrollLeft=panSL-(e.pageX-panStartX)*1.2;
-  };
-  window._acePanUp=function(){panActive=false;document.body.style.removeProperty('cursor');};
-  document.addEventListener('mousedown',window._acePanDown);
-  document.addEventListener('mousemove',window._acePanMove);
-  document.addEventListener('mouseup',  window._acePanUp);
-}
-  document._acePanDown=function(e){
-    const ko=document.getElementById('kanban-outer');if(!ko)return;
-    if(curView!=='kanban')return;
-    if(isInteractive(e.target))return;
-    panActive=true;panStartX=e.pageX;panSL=ko.scrollLeft;
-    document.body.style.setProperty('cursor','grabbing','important');
-  };
-  document._acePanMove=function(e){
-    if(!panActive)return;
-    const ko=document.getElementById('kanban-outer');if(!ko)return;
+  const outer=document.getElementById('kanban-outer');
+  if(!outer) return;
+  let isDown=false, startX=0, sl=0;
+  outer.addEventListener('mousedown',e=>{
+    if(e.target.closest('.card')||e.target.closest('button')||e.target.closest('a')||e.target.closest('select')||e.target.closest('input')) return;
+    isDown=true; startX=e.pageX-outer.offsetLeft; sl=outer.scrollLeft;
+    outer.style.cursor='grabbing';
+  });
+  document.addEventListener('mouseup',()=>{ isDown=false; if(outer) outer.style.cursor=''; });
+  outer.addEventListener('mouseleave',()=>{ isDown=false; outer.style.cursor=''; });
+  outer.addEventListener('mousemove',e=>{
+    if(!isDown) return;
     e.preventDefault();
-    ko.scrollLeft=panSL-(e.pageX-panStartX)*1.2;
-  };
-  document._acePanUp=function(){
-    panActive=false;
-    document.body.style.removeProperty('cursor');
-  };
-  // Clean previous listeners
-  document.removeEventListener('mousedown',document._acePanDownRef);
-  document.removeEventListener('mousemove',document._acePanMoveRef);
-  document.removeEventListener('mouseup',document._acePanUpRef);
-  document._acePanDownRef=document._acePanDown;
-  document._acePanMoveRef=document._acePanMove;
-  document._acePanUpRef=document._acePanUp;
-  document.addEventListener('mousedown',document._acePanDownRef);
-  document.addEventListener('mousemove',document._acePanMoveRef,{passive:false});
-  document.addEventListener('mouseup',document._acePanUpRef);
-  // Restore content div reference (it was cloned out)
-  // Actually let's not clone — just attach to document directly and skip the clone trick
+    const x=e.pageX-outer.offsetLeft;
+    outer.scrollLeft=sl-(x-startX)*1.2;
+  });
 }
 function onDS(e,id){drag=id;setTimeout(()=>{document.getElementById('card-'+id)?.classList.add('dragging');},0);}
 function onDE(){document.getElementById('card-'+drag)?.classList.remove('dragging');}
